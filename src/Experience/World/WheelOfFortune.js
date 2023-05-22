@@ -2,8 +2,10 @@ import Experience from "../Experience";
 import * as THREE from "three";
 import { gsap } from "gsap";
 import Renderer from "../Renderer";
+import { GUI } from "lil-gui";
 export default class WheelOfFortune {
   constructor() {
+    this.gui = new GUI();
     this.wedgeAngles = {};
     this.renderer = new Renderer();
     this.experience = new Experience();
@@ -18,7 +20,11 @@ export default class WheelOfFortune {
     this.square = this.experience.resources.items["square"];
     this.diamond.name = "Light off";
     this.diamondGlow.name = "Light on";
+    this.mainGroup = new THREE.Group();
+    this.experience.scene.add(this.mainGroup);
     this.nfts = [];
+    this.particleGroup = new THREE.Group();
+    this.mainGroup.add(this.particleGroup);
     let i = 0;
     Object.keys(this.experience.resources.items).forEach((element) => {
       if (element.slice(0, 4) == "SMB ") {
@@ -39,28 +45,28 @@ export default class WheelOfFortune {
     this.setWheelTexture(this.square);
 
     // this.setWheelTexture(this.spinButton);
-    this.scene = this.experience.scene;
+    this.scene = this.mainGroup;
     this.frameLights = [];
+    this.spinMesh = null;
+    this.colorsObject = {
+      Color1: "#ffffff",
+      Color2: "#6ff903",
+      Color3: "#00b1f7",
+      Color4: "#c11afb",
+      Color5: "#f77b00",
+      Color6: "#fde901",
+    };
     this.colors = [
-      "red",
-      "orange",
-      "yellow",
-      "brown",
-      "green",
-      "blue",
-      "indigo",
-      "violet",
-      "purple",
-      "pink",
-      "gray",
-      "white",
-      "cyan",
-      "magenta",
+      this.colorsObject.Color1,
+      this.colorsObject.Color2,
+      this.colorsObject.Color3,
+      this.colorsObject.Color4,
+      this.colorsObject.Color5,
+      this.colorsObject.Color6,
     ];
 
     //Frame
     this.createCircleFrame(this.wheel, 4, 78, new THREE.Vector3(), "frame");
-    this.createFrameLights();
     //Wheel
 
     this.wedgeGroup = new THREE.Group();
@@ -68,7 +74,7 @@ export default class WheelOfFortune {
     this.addStick();
 
     this.wedgeGroup.position.setY(-0.22);
-    this.scene.add(this.wedgeGroup);
+    this.mainGroup.add(this.wedgeGroup);
 
     // spin button frame
     this.createCircleFrame(
@@ -92,17 +98,17 @@ export default class WheelOfFortune {
     );
     newSquare.position.z = 0.6;
     newSquare.position.x =
-      Math.sin((startAngle + endAngle) / 2) * (radius - 0.8);
+      Math.sin((startAngle + endAngle) / 2) * (radius - 0.7);
     newSquare.position.y =
-      Math.cos((startAngle + endAngle) / 2) * (radius - 0.8);
-    // this.frameLights.position.y = -radius;
+      Math.cos((startAngle + endAngle) / 2) * (radius - 0.7);
+    // newSquare.rotation.z = 0.5;
     return newSquare;
   }
 
   addPointer() {
     this.pointerContainer = new THREE.Group();
     this.pointerContainer.position.set(0, 3.7, 0.25); // Set position in one call
-    this.scene.add(this.pointerContainer);
+    this.mainGroup.add(this.pointerContainer);
 
     const pointerGeometry = new THREE.PlaneGeometry(0.97, 1.5);
     const pointerMaterial = new THREE.MeshBasicMaterial({
@@ -114,20 +120,17 @@ export default class WheelOfFortune {
 
     this.pointerContainer.add(this.pointerMesh); // Add the pointer mesh to the container
   }
-  // nftsArrayPush = (nft) => {
-  //   this.nfts.push(nft);
-  // };
 
   addButton = () => {
-    const spinGeometry = new THREE.PlaneGeometry(1.4, 1.2);
+    const spinGeometry = new THREE.PlaneGeometry(1.6, 1);
     const spinMaterial = new THREE.MeshBasicMaterial({
       map: this.spinTextButton,
       transparent: true,
     });
-    const spinMesh = new THREE.Mesh(spinGeometry, spinMaterial);
-    spinMesh.position.setZ(0.1);
-    spinMesh.position.setY(-0.12);
-    this.scene.add(spinMesh);
+    this.spinMesh = new THREE.Mesh(spinGeometry, spinMaterial);
+    this.spinMesh.position.setZ(0.1);
+    this.spinMesh.position.setY(-0.12);
+    this.mainGroup.add(this.spinMesh);
   };
 
   addStick(rotation) {
@@ -159,7 +162,7 @@ export default class WheelOfFortune {
   }
 
   showWedges() {
-    this.numOfWedges = 20;
+    this.numOfWedges = 19;
     const wedgeAngle = 360 / this.numOfWedges;
     const colorsLength = this.colors.length;
 
@@ -215,7 +218,11 @@ export default class WheelOfFortune {
     this.addStick(startAngle);
     this.createFrameLights(startAngle, radius);
     let sequare = this.createSquare(startAngle, endAngle, radius);
-    this.wedgeGroup.add(mesh, sequare);
+    let squareGroup = new THREE.Group();
+    this.wedgeGroup.add(squareGroup);
+    squareGroup.add(sequare);
+    squareGroup.rotation.z = 0.1;
+    this.wedgeGroup.add(mesh);
   }
   setWheelTexture(texture) {
     texture.minFilter = THREE.LinearMipmapLinearFilter;
@@ -227,10 +234,12 @@ export default class WheelOfFortune {
       new THREE.MeshBasicMaterial({ map: this.diamond, transparent: true })
     );
     frameLights.position.z = 0.01;
-    frameLights.position.x = Math.sin(startAngle) * (radius + 0.22);
-    frameLights.position.y = Math.cos(startAngle) * (radius + 0.375) - 0.22;
+    frameLights.position.x = Math.sin(startAngle) * (radius + 0.35);
+    frameLights.position.y = Math.cos(startAngle) * (radius + 0.35) - 0.23;
     this.frameLights.push(frameLights);
-    this.experience.scene.add(frameLights);
+    this.frameLightsGroup = new THREE.Group();
+    this.mainGroup.add(this.frameLightsGroup);
+    this.frameLightsGroup.add(frameLights);
   }
   createCircleFrame(
     texture,
@@ -244,56 +253,72 @@ export default class WheelOfFortune {
       map: texture,
       transparent: true,
     });
-    const circle = new THREE.Mesh(geometry, material);
-    circle.name = name;
-    this.spinButton = circle;
-    circle.position.set(position.x, position.y, position.z);
-    this.scene.add(circle);
+    this.circle = new THREE.Mesh(geometry, material);
+    this.circle.name = name;
+    this.circle.scale.set(1.04, 1, 1);
+    this.spinButton = this.circle;
+    this.circle.position.set(position.x, position.y, position.z);
+    this.mainGroup.add(this.circle);
+  }
+
+  createParticlesGeometryAndMaterial() {
+    let particlesGeometry = new THREE.BufferGeometry();
+    let particlesCount = 1000;
+    const positions = new Float32Array(particlesCount * 3);
+
+    for (let i = 0; i < particlesCount * 3; i++) {
+      positions[i] = (Math.random() - 0.5) * 3;
+    }
+    particlesGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(positions, 3)
+    );
+    const particlesMaterial = new THREE.PointsMaterial({
+      size: 0.05,
+      sizeAttenuation: true,
+    });
+
+    this.addParticles(particlesGeometry, particlesMaterial);
+  }
+
+  addParticles(particlesGeometry, particlesMaterial) {
+    const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+    particles.position.z = 1;
+    this.particleGroup.add(particles);
+    this.particleGroup.scale.set(0, 0);
+    this.particleGroup.position.y = 5;
+    this.particleGroup.position.z = 0.6;
   }
 
   rotateWheel() {
-    gsap
-      .to(this.spinButton.scale, {
-        duration: 0.1,
-        x: 1.12,
-        y: 1.12,
-        z: 1.12,
-      })
-      .then(() => {
-        // window.removeEventListener("click", this.rotateWheel);
-        gsap.to(this.spinButton.scale, {
-          delay: 0.02,
-          duration: 0.1,
-          x: 1,
-          y: 1,
-          z: 1,
-        });
-      });
     //Pointer tween
+    // this.startLightsAnimation();
     gsap
       .to(this.pointerContainer.rotation, {
-        duration: 0.7,
+        duration: 1,
         z: 1,
-        repeat: this.numOfWedges * Math.PI * 4,
+        repeat:
+          this.numOfWedges *
+          (360 * (Math.PI / 180) * 4 +
+            (this.wedgeAngles[this.colorsObject.Color4] * (Math.PI / 180) -
+              90 * (Math.PI / 180))),
       })
       .then(
         gsap.to(this.pointerContainer.rotation, {
           delay: 0.2,
           duration: 0.2,
           z: 0,
-          repeat: this.numOfWedges * Math.PI,
+          repeat: this.numOfWedges,
         })
       );
-    setInterval(() => {
-      console.log(this.frameLights);
-      this.changeLights(this.frameLights[4]);
-    }, 200);
+    this.zoomInAnimation();
     gsap
       .to(this.wedgeGroup.rotation, {
         duration: 5,
         z: -(
           360 * (Math.PI / 180) * 4 +
-          (this.wedgeAngles["red"] * (Math.PI / 180) - 90 * (Math.PI / 180))
+          (this.wedgeAngles[this.colorsObject.Color4] * (Math.PI / 180) -
+            90 * (Math.PI / 180))
         ),
       })
       .then(() => {
@@ -302,6 +327,59 @@ export default class WheelOfFortune {
         this.nFTLayer();
       });
   }
+
+  startLightsAnimation() {
+    let i = 0;
+    setInterval(() => {
+      this.changeLights(this.frameLights[i]);
+      this.changeLights(this.frameLights[i + 1]);
+      this.changeLights(this.frameLights[i + 2]);
+      setTimeout(() => {
+        this.changeLights(this.frameLights[i]);
+        this.changeLights(this.frameLights[i + 1]);
+        this.changeLights(this.frameLights[i + 2]);
+      }, 100);
+      if (i > this.numOfWedges) {
+        i = 0;
+      } else i++;
+    }, 250);
+  }
+
+  endingLightsAnimation() {
+    let iterationCount = 1;
+
+    // Maximum number of iterations
+    const maxIterations = 3;
+    let i = 0;
+    setInterval(() => {
+      setTimeout(() => {
+        i = 4;
+        this.changeLights(this.frameLights[i]);
+        this.changeLights(this.frameLights[this.frameLights.length - i]);
+        setTimeout(() => {
+          i = 3;
+          this.changeLights(this.frameLights[i]);
+          this.changeLights(this.frameLights[this.frameLights.length - i]);
+          setTimeout(() => {
+            i = 2;
+            this.changeLights(this.frameLights[i]);
+            this.changeLights(this.frameLights[this.frameLights.length - i]);
+            setTimeout(() => {
+              i = 1;
+              console.log(iterationCount);
+              this.changeLights(this.frameLights[i]);
+              this.changeLights(this.frameLights[this.frameLights.length - i]);
+            }, 450);
+          }, 300);
+        }, 150);
+      }, 50);
+    }, 600);
+  }
+  zoomInAnimation() {
+    gsap.to(this.mainGroup.scale, { duration: 0.3, x: 2, y: 2 });
+    gsap.to(this.mainGroup.position, { duration: 0.3, y: -4.5 });
+  }
+
   nFTLayer() {
     const nftLayer = new THREE.Mesh(
       new THREE.PlaneGeometry(3, 3, 10, 10),
@@ -312,43 +390,44 @@ export default class WheelOfFortune {
     );
     nftLayer.name = "nftLayer";
     nftLayer.position.z = 1;
+    nftLayer.position.y = 0;
     nftLayer.scale.set(0, 0, 0);
-    this.experience.scene.add(nftLayer);
+    this.mainGroup.add(nftLayer);
     this.nftLayerAnimation(nftLayer);
+    this.createParticlesGeometryAndMaterial();
   }
   nftLayerAnimation(winner) {
-    gsap.to(winner.scale, { duration: 0.5, x: 1, y: 1, z: 1 }).then(() => {
+    this.endingLightsAnimation();
+    gsap.to(winner.position, { duration: 0.5, y: 2.5 });
+    gsap.to(winner.scale, { duration: 0.5, x: 0.75, y: 0.75 }).then(() => {
       gsap
-        .to(winner.scale, { delay: 2, duration: 0.5, x: 0, y: 0, z: 0 })
+        .to(winner.scale, { delay: 2, duration: 0.5, x: 0, y: 0 })
         .then(() => {
-          // console.log(this.experience.scene);
           winner.geometry.dispose();
           winner.material.dispose();
-          this.scene.remove(winner);
+          this.mainGroup.remove(winner);
         });
     });
+    gsap
+      .to(this.particleGroup.scale, {
+        duration: 2.5,
+        x: 10,
+        y: 10,
+      })
+      .then(() => {
+        this.particleGroup.children[0].geometry.dispose();
+        this.particleGroup.children[0].material.dispose();
+        this.particleGroup.remove(this.particleGroup.children[0]);
+      });
   }
   changeLights(lights) {
-    console.log(lights.material.map);
     if (lights.material.map == this.diamond) {
       lights.material.map = this.diamondGlow;
+      lights.scale.set(4, 4, 4);
     } else {
       lights.material.map = this.diamond;
+      lights.scale.set(1, 1, 1);
     }
     lights.material.needsUpdate = true;
   }
-  // update = () => {
-  //   requestAnimationFrame(this.update);
-  //   // Update the texture map based on time or any other condition
-  //   console.log(this.frameLights.material.map);
-  //   const time = Date.now() * 0.001; // Example: time-based animation
-  //   if (time % 2 > 1) {
-  //     console.log(this.frameLights.material.map);
-  //     this.frameLights.material.map = this.diamond;
-  //   } else {
-  //     console.log(this.frameLights.material.map);
-  //     this.frameLights.material.map = this.diamondGlow;
-  //   }
-  //   this.frameLights.material.needsUpdate = true;
-  // };
 }
